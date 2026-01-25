@@ -11,7 +11,7 @@ actual val client: HttpClient = HttpClient(CIO) {
     install(WebSockets)
 
     defaultRequest {
-        url(API_BASE_URL)
+        host = API_BASE_URL
         port = SERVER_PORT
     }
 }
