@@ -41,10 +41,10 @@ fun App() {
             client.webSocket("/chat") {
                 value = this
 
-                incoming.receiveAsFlow().collect {
-                    when (val received = incoming.receive()) {
+                incoming.receiveAsFlow().collect { frame ->
+                    when (frame) {
                         is Frame.Text -> {
-                            val receivedText = received.readText()
+                            val receivedText = frame.readText()
                             val message = Json.decodeFromString<Message>(receivedText)
                             messages.add(message)
                         }
