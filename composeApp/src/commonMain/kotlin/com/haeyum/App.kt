@@ -16,10 +16,14 @@ import androidx.compose.ui.unit.dp
 import com.haeyum.componenets.ChatListArea
 import com.haeyum.componenets.FieldArea
 import com.haeyum.componenets.Header
+import com.haeyum.data.client
 import com.haeyum.theme.AppColors
 import com.haeyum.theme.AppTypography
+import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.random.Random
 
@@ -34,7 +38,23 @@ fun App() {
         val username by remember { mutableStateOf(getPlatform().name + Random.nextInt(1, 1000)) }
         val messages = remember { mutableStateListOf<Message>() }
         val session = produceState<WebSocketSession?>(null) {
+            client.webSocket("/chat") {
+                value = this
 
+                incoming.receiveAsFlow().collect {
+                    when (val received = incoming.receive()) {
+                        is Frame.Text -> {
+                            val receivedText = received.readText()
+                            val message = Json.decodeFromString<Message>(receivedText)
+                            messages.add(message)
+                        }
+
+                        else -> {
+                            println("Something Wrong")
+                        }
+                    }
+                }
+            }
         }
 
         Column(
@@ -59,9 +79,13 @@ fun App() {
 
                 FieldArea(
                     textFieldState = textFieldState,
-                    enabled = true,
+                    enabled = session.value != null && textFieldState.text.isNotEmpty(),
                     onSend = { messageText ->
                         coroutineScope.launch {
+                            val message = Message(username = username, content = messageText)
+                            val messageJson = Json.encodeToString(message)
+                            val frame = Frame.Text(messageJson)
+                            session.value?.send(frame)
                             textFieldState.clearText()
                             lazyListState.scrollToBottom()
                         }
