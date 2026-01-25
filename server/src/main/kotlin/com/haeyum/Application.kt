@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.receiveAsFlow
 
 fun main() {
@@ -37,18 +38,22 @@ fun Application.module() {
         webSocket("/chat") {
             val client = this
             clients.add(client)
-            incoming.receiveAsFlow().collect {
-                when (val received = incoming.receive()) {
-                    is Frame.Text -> {
-                        val receivedText = received.readText()
-                        val sendFrame = Frame.Text("Server sent $receivedText")
+            incoming.receiveAsFlow()
+                .onCompletion { clients.remove(this@webSocket) }
+                .collect { received ->
+                    when (received) {
+                        is Frame.Text -> {
+                            clients.forEach { client ->
+                                val receivedText = received.readText()
+                                val sendFrame = Frame.Text(receivedText)
+                                client.send(sendFrame)
+                            }
+                        }
 
-                        outgoing.send(sendFrame)
+                        else -> {
+                            print("Other Frame.Text")
+                        }
                     }
-                    else -> {
-                        print("Other Frame.Text")
-                    }
-                }
             }
         }
     }
