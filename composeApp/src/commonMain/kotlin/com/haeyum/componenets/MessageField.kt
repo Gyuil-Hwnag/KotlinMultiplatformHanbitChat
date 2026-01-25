@@ -40,7 +40,9 @@ fun FieldArea(
     ) {
         BasicTextField(
             state = textFieldState,
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
                 .background(color = AppColors.LightGray, shape = RoundedCornerShape(12.dp)),
             textStyle = TextStyle(color = Color.Black, fontSize = 14.sp),
             decorator = { innerTextField ->
@@ -50,7 +52,7 @@ fun FieldArea(
                 ) {
                     if (textFieldState.text.isEmpty())
                         Text(
-                            "Type a message",
+                            text = "Type a message",
                             style = TextStyle(color = Color.Gray, fontSize = 14.sp)
                         )
 
@@ -60,13 +62,13 @@ fun FieldArea(
         )
 
         Button(
-            onClick = {
-                onSend(textFieldState.text.toString())
-            },
-            modifier = Modifier.fillMaxHeight().padding(start = 12.dp),
+            onClick = { onSend(textFieldState.text.toString()) },
             enabled = enabled,
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = AppColors.Primary),
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(start = 12.dp),
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Default.Send,

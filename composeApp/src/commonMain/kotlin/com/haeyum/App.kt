@@ -10,23 +10,22 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.haeyum.componenets.ChatListArea
 import com.haeyum.componenets.FieldArea
 import com.haeyum.componenets.Header
+import com.haeyum.data.client
 import com.haeyum.theme.AppColors
 import com.haeyum.theme.AppTypography
-import io.ktor.websocket.WebSocketSession
+import io.ktor.client.plugins.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.random.Random
 
 @Composable
 @Preview
@@ -36,52 +35,62 @@ fun App() {
         val coroutineScope = rememberCoroutineScope()
         val textFieldState = rememberTextFieldState()
 
-        val username by remember {
-            mutableStateOf("팡무")
-        }
-
-        val messages = remember {
-            mutableStateListOf(
-                Message(
-                    username = "Hanbit",
-                    content = "Welcome to Hanbit KMP Chat!"
-                ),
-                Message(
-                    username = "Hanbit",
-                    content = "반가워요 여러분!"
-                ),
-                Message(
-                    username = "팡무",
-                    content = "라이브코딩에 오신 것을 환영해요!"
-                ),
-            )
-        }
-
+        val username by remember { mutableStateOf(getPlatform().name + Random.nextInt(1, 1000)) }
+        val messages = remember { mutableStateListOf<Message>() }
         val session = produceState<WebSocketSession?>(null) {
+            client.webSocket("/chat") {
+                value = this
 
+                incoming.receiveAsFlow().collect { frame ->
+                    when (frame) {
+                        is Frame.Text -> {
+                            val receivedText = frame.readText()
+                            val message = Json.decodeFromString<Message>(receivedText)
+                            messages.add(message)
+                        }
+
+                        else -> {
+                            println("Something Wrong")
+                        }
+                    }
+                }
+            }
         }
 
-        Column(modifier = Modifier.fillMaxSize().background(AppColors.White).safeDrawingPadding()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.White)
+                .safeDrawingPadding()
+        ) {
             Header(title = "Hanbit KMP Chat")
 
-            Column(modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 16.dp)
+            ) {
                 ChatListArea(
-                    modifier = Modifier.weight(1f),
                     state = lazyListState,
                     ownerUsername = username,
-                    messages = messages
+                    messages = messages,
+                    modifier = Modifier.weight(1f),
                 )
 
                 FieldArea(
-                    modifier = Modifier.padding(bottom = 24.dp),
                     textFieldState = textFieldState,
-                    enabled = true,
+                    enabled = session.value != null && textFieldState.text.isNotEmpty(),
                     onSend = { messageText ->
                         coroutineScope.launch {
+                            val message = Message(username = username, content = messageText)
+                            val messageJson = Json.encodeToString(message)
+                            val frame = Frame.Text(messageJson)
+                            session.value?.send(frame)
                             textFieldState.clearText()
                             lazyListState.scrollToBottom()
                         }
-                    }
+                    },
+                    modifier = Modifier.padding(bottom = 24.dp),
                 )
             }
         }

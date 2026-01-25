@@ -38,16 +38,17 @@ fun ChatListArea(
             val isMe = ownerUsername == message.username
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                if (isMe)
+                if (isMe) {
                     Box(modifier = Modifier.weight(1f))
+                }
 
                 Column {
                     if (!isMe && message.username != messages.getOrNull(index - 1)?.username) {
                         Text(
                             text = message.username,
-                            modifier = Modifier.padding(bottom = 4.dp),
                             color = AppColors.Black,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 4.dp),
                         )
                     }
 
