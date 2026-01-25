@@ -26,7 +26,7 @@ fun ChatBubble(
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Text(
-            message.content,
+            text = message.content,
             color = if (isMe) AppColors.White else AppColors.Black,
             fontSize = 14.sp,
             lineHeight = 14.sp
